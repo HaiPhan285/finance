@@ -1,8 +1,11 @@
 # data.py
 from openbb import obb
 import pandas as pd
+from datetime import datetime
 
-def get_data(symbol, start="2023-01-01", end="2025-01-01"):
+end = datetime.today().strftime("%Y-%m-%d")
+#year - month - day
+def get_data(symbol: str, start: str = "2023-01-01", end: str | None = None) -> pd.DataFrame:
     df = obb.equity.price.historical(
         symbol,
         start_date=start,
@@ -11,6 +14,6 @@ def get_data(symbol, start="2023-01-01", end="2025-01-01"):
 
     df.index = pd.to_datetime(df.index).tz_localize(None)
 
-    df = df[["open", "high", "low", "close", "volume"]].dropna()
+    df = df[[ "close"]].dropna()
 
     return df

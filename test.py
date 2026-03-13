@@ -1,44 +1,43 @@
-import backtrader as bt
+# test.py
+import numpy as np
 import pandas as pd
 from data import get_data
 
-# --------------------------
-# 1) Strategy Definition
-# --------------------------
-class SmaCross(bt.Strategy):
-    params = dict(fast=20, slow=50)
 
-    def __init__(self):
-        self.sma_fast = bt.ind.SMA(self.data.close, period=self.p.fast)
-        self.sma_slow = bt.ind.SMA(self.data.close, period=self.p.slow)
-        self.crossover = bt.ind.CrossOver(self.sma_fast, self.sma_slow)
-
-    def next(self):
-        if not self.position and self.crossover > 0:
-            self.buy()
-        elif self.position and self.crossover < 0:
-            self.sell()
+def compute_log_returns(prices):
+    return np.log(prices / prices.shift(1)).dropna()
 
 
+def portfolio_returns(returns, weights):
+    return returns @ weights
 
-def run_backtest(symbol):
-    df = get_data(symbol)
 
-    data = bt.feeds.PandasData(dataname=df)
+def sharpe_ratio(portfolio_ret, risk_free_rate=0.0):
+    daily_rf = risk_free_rate / 252
+    excess_ret = portfolio_ret - daily_rf
 
-    cerebro = bt.Cerebro()
-    cerebro.adddata(data)
-    cerebro.addstrategy(SmaCross)
+    mean = excess_ret.mean()
+    std = excess_ret.std(ddof=1)
 
-    cerebro.broker.setcash(10000)
-    cerebro.broker.setcommission(commission=0.001)
+    if std == 0:
+        return 0.0
 
-    print("Starting Value:", cerebro.broker.getvalue())
-    results = cerebro.run()
-    print("Final Value:", cerebro.broker.getvalue())
-
-    cerebro.plot()
+    return (mean / std) * np.sqrt(252)
 
 
 if __name__ == "__main__":
-    run_backtest("AAPL")
+
+    symbols = ["TSLA", "NVDA", "JPM", "INTC", "META", "SCHG", "TSM"]
+    price_list = []
+
+    for s in symbols:
+        df = get_data(s)
+        price_list.append(df["close"].rename(s))
+
+    prices = pd.concat(price_list, axis=1).dropna()
+    returns = compute_log_returns(prices)
+    weights = np.ones(len(symbols)) / len(symbols)
+    port_ret = portfolio_returns(returns, weights)
+    sharpe = sharpe_ratio(port_ret)
+
+    print("Annualized Sharpe Ratio:", round(sharpe, 4))
