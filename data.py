@@ -1,11 +1,19 @@
-import yfinance as yf
+# data.py
+from openbb import obb
+import pandas as pd
+from datetime import datetime
 
+end = datetime.today().strftime("%Y-%m-%d")
+#year - month - day
+def get_data(symbol: str, start: str = "2023-01-01", end: str | None = None) -> pd.DataFrame:
+    df = obb.equity.price.historical(
+        symbol,
+        start_date=start,
+        end_date=end
+    ).to_dataframe()
 
-def main():
-    df = yf.download("AAPL", start="2024-01-01", auto_adjust=True)
-    print(df.tail())
-    df.to_csv("AAPL.csv")
+    df.index = pd.to_datetime(df.index).tz_localize(None)
 
+    df = df[[ "close"]].dropna()
 
-if __name__ == "__main__":
-    main()
+    return df
